@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShipSafe AI - Cloud Security &amp; Deployment Readiness Advisor</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Offline / Error Warning Banner -->
+  <div id="backend-offline-banner" class="connection-banner hidden" role="alert">
+    <div class="container banner-container">
+      <div class="banner-text">
+        <strong>⚠️ Backend Disconnected:</strong> Cannot reach the ShipSafe AI service at <code>http://127.0.0.1:8000</code>.
+        Make sure the backend is running with <code>python -m uvicorn app.main:app --app-dir backend --reload</code>.
+      </div>
+      <button id="banner-retry-btn" class="btn btn-sm btn-outline-white">Retry Connection</button>
+    </div>
+  </div>
+
+  <!-- Main Navigation Header -->
+  <header class="header">
+    <div class="container header-container">
+      <div class="brand-group">
+        <div class="brand-logo" aria-hidden="true">🛡️</div>
+        <div>
+          <div class="brand-name">ShipSafe AI</div>
+          <div class="brand-tagline">Secure Every Change Before It Ships.</div>
+        </div>
+      </div>
+
+      <nav class="nav-links" aria-label="Main Navigation">
+        <a href="#overview" class="nav-link active" data-target="overview">Overview</a>
+        <a href="#assistant" class="nav-link" data-target="assistant">
+          🎙️ Assistant <span class="badge badge-info" style="font-size: 0.65rem; padding: 0.1rem 0.4rem;">Simulated Alexa+</span>
+        </a>
+        <a href="#analyzer" class="nav-link" data-target="analyzer">Analyzer</a>
+        <a href="#findings" class="nav-link" data-target="findings">
+          Findings <span id="nav-findings-badge" class="nav-pill hidden">0</span>
+        </a>
+        <a href="#verification" class="nav-link" data-target="verification">Verification</a>
+        <a href="#history" class="nav-link" data-target="history">Local History</a>
+      </nav>
+
+      <div class="header-status">
+        <span class="status-indicator-dot" id="system-status-dot"></span>
+        <span id="system-status-text" class="status-text">Backend: Checking...</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="container main-content">
+    <!-- ====================================================================
+         SECTION 1: OVERVIEW DASHBOARD
+         ==================================================================== -->
+    <section id="section-overview" class="dashboard-section active">
+      <div class="overview-hero">
+        <div class="hero-left">
+          <span class="hero-tag">Cloud Security Advisor</span>
+          <h1 class="hero-title">Pre-Flight Security for AWS Configurations</h1>
+          <p class="hero-subtitle">
+            ShipSafe AI statically evaluates synthetic AWS configurations to catch critical misconfigurations,
+            explain security impact, provide remediation recipes, and verify resolutions before shipping.
+          </p>
+          <div class="hero-actions">
+            <button class="btn btn-primary btn-lg" id="overview-cta-btn">
+              <span>🔍</span> Analyze Configuration
+            </button>
+            <button class="btn btn-secondary btn-lg" id="overview-assistant-btn">
+              <span>🎙️</span> Open ShipSafe Assistant
+            </button>
+            <button class="btn btn-secondary btn-lg" id="overview-load-sample-btn">
+              <span>📄</span> Load Insecure S3 Sample
+            </button>
+          </div>
+        </div>
+        <div class="hero-stats-panel">
+          <div class="stat-card">
+            <div class="stat-label">Total Analyzed</div>
+            <div class="stat-value" id="stat-total-scans">0</div>
+            <div class="stat-meta">Browser local session</div>
+          </div>
+          <div class="stat-card stat-card-critical">
+            <div class="stat-label">Critical &amp; High Risks</div>
+            <div class="stat-value text-critical" id="stat-critical-risks">0</div>
+            <div class="stat-meta">Require immediate fix</div>
+          </div>
+          <div class="stat-card stat-card-warning">
+            <div class="stat-label">Medium &amp; Low Risks</div>
+            <div class="stat-value text-warning" id="stat-medium-risks">0</div>
+            <div class="stat-meta">Hardening recommendations</div>
+          </div>
+          <div class="stat-card stat-card-success">
+            <div class="stat-label">Verified Resolved</div>
+            <div class="stat-value text-success" id="stat-verified-count">0</div>
+            <div class="stat-meta">Confirmed via rule re-check</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Overview Quick Activity -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Recent Analysis Activity</h2>
+            <p class="card-subtitle">Recent configuration scans performed in this browser session.</p>
+          </div>
+          <button class="btn btn-sm btn-secondary" id="overview-clear-activity-btn">Clear Activity</button>
+        </div>
+        <div id="overview-activity-container" class="table-container">
+          <div class="empty-state" id="overview-empty-activity">
+            <div class="empty-icon">📋</div>
+            <p>No configuration scans recorded yet.</p>
+            <p class="text-muted text-sm">Analyze a configuration below to see activity logged here.</p>
+          </div>
+          <table class="data-table hidden" id="overview-activity-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Resource ID</th>
+                <th>Verdict</th>
+                <th>Confirmed Risks</th>
+                <th>Missing Evidence</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="overview-activity-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Platform Capabilities Status -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Engine Capabilities &amp; Roadmap</h2>
+            <p class="card-subtitle">Live status reported directly from <code>GET /api/features</code>.</p>
+          </div>
+          <button class="btn btn-sm btn-secondary" id="refresh-capabilities-btn">Refresh</button>
+        </div>
+        <div class="features-grid" id="capabilities-grid">
+          <div class="loading-state">Loading capabilities catalog from backend...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SECTION: SHIPSAFE ASSISTANT (SIMULATED ALEXA+ EXPERIENCE)
+         ==================================================================== -->
+    <section id="section-assistant" class="dashboard-section">
+      <div class="disclaimer-alert alert-info" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.25rem;">
+        <div>
+          <strong>🎙️ Simulated Alexa+ Experience:</strong>
+          Interactive voice-first simulation for the Amazon Developer Hackathon.
+          Grounded in deterministic AWS security checks. Not connected to physical Alexa devices or official Alexa+ services.
+        </div>
+        <span class="badge badge-info">Simulated Alexa+ Track</span>
+      </div>
+
+      <div class="section-heading">
+        <div>
+          <h2>ShipSafe Assistant</h2>
+          <p class="text-muted">Conversational security advisor guiding you through analysis, risk explanation, and remediation verification.</p>
+        </div>
+      </div>
+
+      <div class="assistant-layout">
+        <!-- Main Chat Stream -->
+        <div class="card chat-card">
+          <div class="chat-header">
+            <div class="chat-assistant-meta">
+              <div class="assistant-avatar">🎙️</div>
+              <div>
+                <strong style="display: block; font-size: 0.95rem;">ShipSafe Assistant</strong>
+                <span class="text-sm text-muted">Guided Multi-Step Security Workflow</span>
+              </div>
+            </div>
+            <div class="chat-header-actions">
+              <span id="chat-agentic-step-badge" class="badge badge-outline">Step 1: Session Ready</span>
+              <button id="assistant-clear-btn" class="btn btn-sm btn-secondary" title="Reset chat history">Reset Chat</button>
+            </div>
+          </div>
+
+          <!-- Message History -->
+          <div id="chat-stream-container" class="chat-stream">
+            <!-- Initial Assistant Greeting -->
+            <div class="chat-message message-assistant">
+              <div class="msg-avatar">🎙️</div>
+              <div class="msg-bubble">
+                <div class="msg-author">ShipSafe Assistant <span class="badge badge-outline" style="font-size: 0.65rem;">Deterministic Engine</span></div>
+                <div class="msg-text">
+                  Hello! I am <strong>ShipSafe Assistant</strong> &mdash; your simulated Alexa+ cloud security advisor.
+                  I help you inspect AWS configurations, prioritize critical risks with concrete evidence, and verify that fixes resolve vulnerabilities before shipping.
+                </div>
+                <div class="msg-subtext">Click any of the suggested prompts below or type a conversational command to begin:</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Suggested Quick Prompts -->
+          <div class="chat-prompts-bar">
+            <div class="prompts-label">Suggested Prompts:</div>
+            <div id="assistant-prompt-chips" class="prompt-chips-wrap">
+              <button class="prompt-chip" data-prompt="Analyze my sample S3 configuration.">Analyze my sample S3 configuration.</button>
+              <button class="prompt-chip" data-prompt="What is the most serious issue?">What is the most serious issue?</button>
+              <button class="prompt-chip" data-prompt="Explain why this configuration is risky.">Explain why this configuration is risky.</button>
+              <button class="prompt-chip" data-prompt="How can I fix the public-access issue?">How can I fix the public-access issue?</button>
+              <button class="prompt-chip" data-prompt="Show me the evidence.">Show me the evidence.</button>
+              <button class="prompt-chip" data-prompt="Analyze the corrected configuration.">Analyze the corrected configuration.</button>
+              <button class="prompt-chip" data-prompt="Did the fix resolve the original issue?">Did the fix resolve the original issue?</button>
+              <button class="prompt-chip" data-prompt="Summarize the remaining risks.">Summarize the remaining risks.</button>
+            </div>
+          </div>
+
+          <!-- Chat Input Bar -->
+          <form id="assistant-chat-form" class="chat-input-bar">
+            <input type="text" id="assistant-input" class="chat-input-field" placeholder="Ask ShipSafe Assistant (e.g., 'What is the most serious issue?')..." autocomplete="off" required>
+            <button type="submit" id="assistant-send-btn" class="btn btn-primary">
+              <span>Send</span> ➔
+            </button>
+          </form>
+        </div>
+
+        <!-- Assistant Context Sidebar -->
+        <div class="card assistant-context-sidebar">
+          <h3 class="card-title" style="font-size: 1rem;">Session Context</h3>
+          <p class="text-sm text-muted">Current state maintained in browser session.</p>
+
+          <div class="context-field">
+            <span class="context-label">Workflow Step</span>
+            <div id="ctx-step" class="context-val font-mono">Step 1: Session Initialized</div>
+          </div>
+
+          <div class="context-field">
+            <span class="context-label">Explanation Mode</span>
+            <div id="ctx-mode" class="context-val"><span class="badge badge-outline">Deterministic Template</span></div>
+          </div>
+
+          <div class="context-field">
+            <span class="context-label">Target Resource</span>
+            <div id="ctx-resource" class="context-val font-mono">synthetic-bucket-insecure-demo-01</div>
+          </div>
+
+          <div class="context-field">
+            <span class="context-label">Data Origin</span>
+            <div class="context-val"><span class="badge badge-outline">Synthetic Demo Artifact</span></div>
+          </div>
+
+          <div class="context-actions">
+            <strong class="text-sm" style="display: block; margin-bottom: 0.5rem; color: var(--text-main);">Quick Session Actions:</strong>
+            <button id="ctx-load-insecure-btn" class="btn btn-sm btn-secondary" style="width: 100%; margin-bottom: 0.4rem;">
+              <span>📄</span> Load Insecure Sample
+            </button>
+            <button id="ctx-load-secure-btn" class="btn btn-sm btn-secondary" style="width: 100%; margin-bottom: 0.4rem;">
+              <span>✅</span> Load Corrected Sample
+            </button>
+            <button id="ctx-jump-findings-btn" class="btn btn-sm btn-secondary" style="width: 100%;">
+              <span>🔍</span> View Findings Table
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SECTION 2: CONFIGURATION ANALYZER
+         ==================================================================== -->
+    <section id="section-analyzer" class="dashboard-section">
+      <div class="section-heading">
+        <div>
+          <h2>Configuration Analyzer</h2>
+          <p class="text-muted">Supply a synthetic AWS configuration JSON to inspect for security risks, policy gaps, and missing controls.</p>
+        </div>
+      </div>
+
+      <div class="analyzer-grid">
+        <!-- Editor Controls & Actions -->
+        <div class="card editor-card">
+          <div class="editor-toolbar">
+            <div class="toolbar-group">
+              <label for="sample-selector" class="toolbar-label">Load Template:</label>
+              <select id="sample-selector" class="select-input">
+                <option value="insecure">Insecure S3 Bucket (High Risk Sample)</option>
+                <option value="secure">Remediated S3 Bucket (Hardened Sample)</option>
+                <option value="missing">Incomplete S3 Bucket (Missing Evidence)</option>
+                <option value="blank">Blank S3 Template</option>
+              </select>
+            </div>
+            <div class="toolbar-group">
+              <label for="file-upload" class="btn btn-sm btn-secondary file-upload-btn">
+                <span>📁</span> Upload JSON File
+                <input type="file" id="file-upload" accept=".json,application/json" class="file-input-hidden">
+              </label>
+              <button id="format-json-btn" class="btn btn-sm btn-secondary" title="Format and indent JSON">Format JSON</button>
+              <button id="clear-editor-btn" class="btn btn-sm btn-secondary" title="Clear input">Clear</button>
+            </div>
+          </div>
+
+          <div class="editor-wrapper">
+            <textarea id="json-editor" spellcheck="false" placeholder="Paste synthetic AWS S3 configuration JSON here..." rows="22"></textarea>
+          </div>
+
+          <div class="editor-footer">
+            <div id="editor-validation-feedback" class="feedback-indicator feedback-valid">
+              <span class="indicator-icon">✓</span> Valid JSON format
+            </div>
+            <div class="footer-actions">
+              <button id="analyze-submit-btn" class="btn btn-primary btn-lg">
+                <span>🔍</span> Run Security Analysis
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Analyzer Help & Synthetic Notice -->
+        <div class="card info-card">
+          <h3 class="card-title">Synthetic Configuration Analysis</h3>
+          <p class="text-sm text-muted">
+            ShipSafe AI evaluates static structure without connecting to AWS or requiring live cloud credentials.
+          </p>
+          <div class="info-block">
+            <strong>Expected Configuration Format:</strong>
+            <pre class="code-preview"><code>{
+  "configuration_type": "AWS::S3::Bucket",
+  "metadata": {
+    "resource_id": "demo-bucket-01"
+  },
+  "configurations": {
+    "public_access_block": { ... },
+    "server_side_encryption": { ... },
+    "bucket_policy": { ... }
+  }
+}</code></pre>
+          </div>
+          <div class="info-block">
+            <strong>Evaluated Security Vectors:</strong>
+            <ul class="text-sm feature-checklist">
+              <li>Public Access Block all 4 protection flags</li>
+              <li>Wildcard anonymous Bucket Policy exposure</li>
+              <li>Enforcement of TLS / HTTPS in transit</li>
+              <li>Global AllUsers &amp; AuthenticatedUsers ACLs</li>
+              <li>Server-Side Encryption with KMS / AES256</li>
+              <li>Object Versioning state</li>
+              <li>Access logging and audit target bucket</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SECTION 3: SECURITY FINDINGS
+         ==================================================================== -->
+    <section id="section-findings" class="dashboard-section">
+      <div class="section-heading">
+        <div>
+          <h2>Security Findings</h2>
+          <p class="text-muted">Explainable security findings generated with concrete evidence from the evaluated configuration.</p>
+        </div>
+        <button id="findings-send-to-verify-btn" class="btn btn-secondary">
+          <span>🔄</span> Verify Fixes Against These Findings
+        </button>
+      </div>
+
+      <!-- Verdict Banner -->
+      <div id="findings-verdict-banner" class="verdict-banner banner-neutral">
+        <div class="verdict-header">
+          <div class="verdict-title-group">
+            <span class="verdict-badge" id="verdict-badge-label">Awaiting Analysis</span>
+            <span class="verdict-resource font-mono" id="verdict-resource-id">No configuration evaluated yet</span>
+          </div>
+          <div class="verdict-stats" id="verdict-counts-group">
+            <span class="count-pill pill-critical"><strong id="pill-count-critical">0</strong> Critical/High</span>
+            <span class="count-pill pill-warning"><strong id="pill-count-warning">0</strong> Medium/Low</span>
+            <span class="count-pill pill-info"><strong id="pill-count-missing">0</strong> Missing Evidence</span>
+            <span class="count-pill pill-neutral"><strong id="pill-count-info">0</strong> Info</span>
+          </div>
+        </div>
+        <p class="verdict-description" id="verdict-description-text">
+          Run an analysis on the Configuration Analyzer tab to generate concrete findings.
+        </p>
+      </div>
+
+      <!-- Scope Disclaimer Note -->
+      <div id="findings-disclaimer-box" class="disclaimer-alert hidden">
+        <strong>Security Scope Notice:</strong> <span id="findings-disclaimer-text"></span>
+      </div>
+
+      <!-- Filters & Findings List -->
+      <div class="card">
+        <div class="card-header findings-toolbar">
+          <div class="filter-group">
+            <label for="severity-filter" class="text-sm text-muted">Filter Severity:</label>
+            <select id="severity-filter" class="select-input select-sm">
+              <option value="ALL">All Severities</option>
+              <option value="CRITICAL">Critical</option>
+              <option value="HIGH">High</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="LOW">Low</option>
+              <option value="INFORMATIONAL">Informational</option>
+            </select>
+
+            <label for="type-filter" class="text-sm text-muted" style="margin-left: 0.5rem;">Finding Type:</label>
+            <select id="type-filter" class="select-input select-sm">
+              <option value="ALL">All Types</option>
+              <option value="CONFIRMED_RISK">Confirmed Risks</option>
+              <option value="MISSING_EVIDENCE">Missing Evidence</option>
+              <option value="INFORMATIONAL">Informational</option>
+            </select>
+          </div>
+          <div class="findings-count-text" id="findings-display-count">Showing 0 findings</div>
+        </div>
+
+        <div id="findings-list-container" class="findings-stream">
+          <div class="empty-state" id="findings-empty-state">
+            <div class="empty-icon">🛡️</div>
+            <p>No findings to display.</p>
+            <p class="text-muted text-sm">Submit a configuration in the Analyzer tab to inspect findings.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SECTION 4: REMEDIATION VERIFICATION
+         ==================================================================== -->
+    <section id="section-verification" class="dashboard-section">
+      <div class="section-heading">
+        <div>
+          <h2>Remediation Verification</h2>
+          <p class="text-muted">
+            Submit a corrected configuration to verify resolution. The backend re-executes deterministic checks
+            to confirm whether targeted issues are resolved.
+          </p>
+        </div>
+      </div>
+
+      <div class="verification-layout">
+        <!-- Verification Config Editor -->
+        <div class="card verification-editor-card">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Corrected Configuration JSON</h3>
+              <p class="card-subtitle">Adjust the vulnerable parameters and recheck against the engine.</p>
+            </div>
+            <div class="quick-remediation-buttons">
+              <button id="verify-load-remediated-btn" class="btn btn-sm btn-secondary">Load Secure Baseline</button>
+            </div>
+          </div>
+
+          <div class="editor-wrapper">
+            <textarea id="verify-json-editor" spellcheck="false" placeholder="Paste corrected configuration JSON here..." rows="18"></textarea>
+          </div>
+
+          <div class="editor-footer">
+            <div id="verify-validation-feedback" class="feedback-indicator feedback-valid">
+              <span class="indicator-icon">✓</span> Valid JSON format
+            </div>
+            <button id="verify-submit-btn" class="btn btn-success btn-lg">
+              <span>🔄</span> Re-execute Checks (POST /api/verify)
+            </button>
+          </div>
+        </div>
+
+        <!-- Verification Results Dashboard -->
+        <div class="card verification-results-card">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Verification Outcome</h3>
+              <p class="card-subtitle">Real-time status based on rule re-execution.</p>
+            </div>
+            <span id="verify-overall-badge" class="badge badge-outline">Awaiting Verification</span>
+          </div>
+
+          <div id="verify-summary-stats" class="verify-stats-bar hidden">
+            <div class="verify-stat-box stat-box-resolved">
+              <span class="stat-number" id="verify-count-resolved">0</span>
+              <span class="stat-desc">Resolved</span>
+            </div>
+            <div class="verify-stat-box stat-box-present">
+              <span class="stat-number" id="verify-count-present">0</span>
+              <span class="stat-desc">Still Present</span>
+            </div>
+            <div class="verify-stat-box stat-box-unable">
+              <span class="stat-number" id="verify-count-unable">0</span>
+              <span class="stat-desc">Unable to Verify</span>
+            </div>
+          </div>
+
+          <div id="verify-results-container" class="verify-items-stream">
+            <div class="empty-state" id="verify-empty-state">
+              <div class="empty-icon">⚖️</div>
+              <p>No verification run yet.</p>
+              <p class="text-muted text-sm">Provide your corrected configuration and click "Re-execute Checks".</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SECTION 5: LOCAL ANALYSIS HISTORY
+         ==================================================================== -->
+    <section id="section-history" class="dashboard-section">
+      <div class="section-heading">
+        <div>
+          <h2>Analysis History</h2>
+          <p class="text-muted">Review previous evaluations performed in this browser.</p>
+        </div>
+        <button id="history-clear-all-btn" class="btn btn-danger btn-sm">Clear All History</button>
+      </div>
+
+      <!-- Explicit Local Storage Notice -->
+      <div class="disclaimer-alert alert-info">
+        <strong>ℹ️ Browser-Local Storage:</strong>
+        This history is stored exclusively in your local browser's <code>localStorage</code>.
+        It is never transmitted to, recorded in, or stored by any remote database or external service.
+      </div>
+
+      <div class="card">
+        <div class="table-container">
+          <div class="empty-state" id="history-empty-state">
+            <div class="empty-icon">📂</div>
+            <p>Your local history is empty.</p>
+            <p class="text-muted text-sm">Perform an analysis in the Analyzer tab to automatically log runs here.</p>
+          </div>
+          <table class="data-table hidden" id="history-data-table">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Resource ID</th>
+                <th>Verdict</th>
+                <th>Total Findings</th>
+                <th>Confirmed Risks</th>
+                <th>Missing Evidence</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="history-table-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modern Clean Footer -->
+  <footer class="footer">
+    <div class="container footer-container">
+      <div>
+        <strong>ShipSafe AI</strong> &mdash; Secure Every Change Before It Ships.
+      </div>
+      <div class="footer-meta text-muted">
+        Deterministic AWS Configuration Security Advisor &bull; Zero AWS Credentials Required
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

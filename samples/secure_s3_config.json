@@ -1,0 +1,68 @@
+{
+  "_notice": "SYNTHETIC DEMONSTRATION ARTIFACT ONLY. NOT A REAL AWS RESOURCE OR ACCOUNT.",
+  "configuration_type": "AWS::S3::Bucket",
+  "metadata": {
+    "resource_id": "synthetic-bucket-secure-demo-01",
+    "bucket_name": "synthetic-demo-secure-app-uploads",
+    "region": "us-east-1",
+    "environment": "synthetic-testing"
+  },
+  "configurations": {
+    "public_access_block": {
+      "block_public_acls": true,
+      "ignore_public_acls": true,
+      "block_public_policy": true,
+      "restrict_public_buckets": true
+    },
+    "access_control_list": {
+      "grants": [],
+      "owner": {
+        "display_name": "synthetic-admin",
+        "id": "synthetic-owner-id-000000000001"
+      }
+    },
+    "server_side_encryption": {
+      "rules": [
+        {
+          "apply_server_side_encryption_by_default": {
+            "sse_algorithm": "aws:kms",
+            "kms_master_key_id": "arn:aws:kms:us-east-1:111122223333:key/synthetic-sample-key-id"
+          },
+          "bucket_key_enabled": true
+        }
+      ]
+    },
+    "versioning": {
+      "status": "Enabled",
+      "mfa_delete": "Disabled"
+    },
+    "server_access_logging": {
+      "enabled": true,
+      "target_bucket": "synthetic-demo-central-access-logs",
+      "target_prefix": "synthetic-demo-secure-app-uploads/"
+    },
+    "bucket_policy": {
+      "version": "2012-10-17",
+      "statement": [
+        {
+          "sid": "EnforceTLSRequestsOnly",
+          "effect": "Deny",
+          "principal": "*",
+          "action": "s3:*",
+          "resource": [
+            "arn:aws:s3:::synthetic-demo-secure-app-uploads",
+            "arn:aws:s3:::synthetic-demo-secure-app-uploads/*"
+          ],
+          "condition": {
+            "Bool": {
+              "aws:SecureTransport": "false"
+            }
+          }
+        }
+      ]
+    },
+    "object_lock": {
+      "enabled": false
+    }
+  }
+}
