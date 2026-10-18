@@ -86,6 +86,7 @@ Cloud misconfigurations remain the leading cause of cloud data breaches and data
 
 ## Architecture & Tech Stack
 
+
 ```text
 +---------------------------------------------------------------------------------+
 |                         ShipSafe AI Frontend (Web UI)                           |
