@@ -87,58 +87,9 @@ Cloud misconfigurations remain the leading cause of cloud data breaches and data
 ## Architecture & Tech Stack
 
 
-```text
-+---------------------------------------------------------------------------------+
-|                         ShipSafe AI Frontend (Web UI)                           |
-|        - Overview Dashboard          - Static S3 Config Analyzer                |
-|        - Security Findings Detail    - Remediation Verifier                     |
-|        - Browser-Local History       - Simulated Alexa+ Assistant Experience    |
-+---------------------------------------------------------------------------------+
-                                       |
-                              REST JSON HTTP API
-                                       |
-                                       v
-+---------------------------------------------------------------------------------+
-|                             FastAPI Backend                                     |
-|                                                                                 |
-|   +-----------------------+     +-----------------------+                       |
-|   |   GET /api/health     |     |   GET /api/features   |                       |
-|   +-----------------------+     +-----------------------+                       |
-|   +-----------------------+     +-----------------------+                       |
-|   |   POST /api/analyze   |     |   POST /api/verify    |                       |
-|   +-----------------------+     +-----------------------+                       |
-|   +-----------------------+     +-----------------------+                       |
-|   |  POST /assistant/chat |     | GET /explainer/status |                       |
-|   +-----------------------+     +-----------------------+                       |
-|   +-----------------------+                                                     |
-|   | POST /explain/finding |                                                     |
-|   +-----------------------+                                                     |
-|                                                                                 |
-|   +-------------------------------------------------------------------------+   |
-|   |                    Security Explanation Service                         |   |
-|   |                                                                         |   |
-|   |    [BEDROCK_ENABLED=true]                   [BEDROCK_ENABLED=false]     |   |
-|   |              |                                         |                |   |
-|   |              v                                         v                |   |
-|   |   +---------------------+                    +---------------------+    |   |
-|   |   |   Amazon Bedrock    |                    |    Deterministic    |    |   |
-|   |   | Explanation Provider|                    |    Template Engine  |    |   |
-|   |   +---------------------+                    +---------------------+    |   |
-|   |              |                                         ^                |   |
-|   |              +----[On Timeout / AccessDenied / Err]----+                |   |
-|   |                            (Safe Fallback)                              |   |
-|   +-------------------------------------------------------------------------+   |
-+---------------------------------------------------------------------------------+
-                                       |
-                         Zero Required Cloud Services
-                                       |
-                                       v
-+---------------------------------------------------------------------------------+
-|                     Synthetic AWS Configuration Payloads                        |
-|   - samples/insecure_s3_config.json                                             |
-|   - samples/secure_s3_config.json                                               |
-+---------------------------------------------------------------------------------+
-```
+![ShipSafe AI System Architecture](architecture.png)
+
+
 
 - **Backend:** Python 3.11+ with [FastAPI](https://fastapi.tiangolo.com/)
 - **Server:** [Uvicorn](https://www.uvicorn.org/) (ASGI server)
